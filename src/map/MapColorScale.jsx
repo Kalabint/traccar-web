@@ -1,11 +1,15 @@
 import React, { useRef, useEffect, useState } from 'react';
 import { useAttributePreference } from '../common/util/preferences';
+console.log(useAttributePreference);
 import getSpeedColor from '../common/util/colors';
+import { useTranslation } from '../common/components/LocalizationProvider';
+import { speedFromKnots, speedUnitString } from '../common/util/converter';
 
 const MapColorScale = ({ minSpeed, maxSpeed }) => {
   const [width, setWidth] = useState(100);
   const scaleRef = useRef(null);
-  const distanceUnit = useAttributePreference('distanceUnit');
+  const speedUnit = useAttributePreference('speedUnit', 'kn');
+  const t = useTranslation();
 
   useEffect(() => {
     if (scaleRef.current) {
@@ -13,45 +17,21 @@ const MapColorScale = ({ minSpeed, maxSpeed }) => {
         entries.forEach((entry) => {
           setWidth(entry.contentRect.width);
         });
-        return undefined;
       });
       resizeObserver.observe(scaleRef.current);
       return () => {
         resizeObserver.disconnect();
       };
     }
-    return undefined;
   }, []);
 
-  const convertSpeed = (speedInKnots) => {
-    switch (distanceUnit) {
-      case 'mi':
-        return speedInKnots * 1.15078;
-      case 'nmi':
-        return speedInKnots;
-      case 'km':
-        return speedInKnots * 1.852;
-      default:
-        return speedInKnots * 1.852; // Added explicit default return
-    }
-  };
-
   const formatSpeed = (speed) => {
-    const convertedSpeed = convertSpeed(speed);
+    const convertedSpeed = speedFromKnots(speed, speedUnit);
     return Math.round(convertedSpeed);
   };
 
   const getUnitLabel = () => {
-    switch (distanceUnit) {
-      case 'mi':
-        return 'mph';
-      case 'nmi':
-        return 'knots';
-      case 'km':
-        return 'km/h';
-      default:
-        return 'km/h'; // Added explicit default return
-    }
+    return speedUnitString(speedUnit, t);
   };
 
   const steps = Math.max(2, Math.floor(width / 2));
@@ -60,11 +40,10 @@ const MapColorScale = ({ minSpeed, maxSpeed }) => {
     return { speed, color: getSpeedColor(speed, maxSpeed), key: `legend-${speed}-${i}` };
   });
 
-  return React.createElement(
-    'div',
-    {
-      ref: scaleRef,
-      style: {
+  return (
+    <div
+      ref={scaleRef}
+      style={{
         position: 'absolute',
         bottom: '40px',
         left: '10px',
@@ -80,25 +59,24 @@ const MapColorScale = ({ minSpeed, maxSpeed }) => {
         borderLeft: '2px solid black',
         borderBottom: '2px solid black',
         borderRight: '2px solid black',
-      },
-    },
-    React.createElement(
-      'div',
-      { style: { display: 'flex', height: '10px', marginBottom: '2px' } },
-      legendItems.map(({ color, key }) => React.createElement('div', {
-        key, // Use a more unique key rather than just index
-        style: {
-          flexGrow: 1,
-          backgroundColor: color,
-        },
-      })),
-    ),
-    React.createElement(
-      'div',
-      { style: { display: 'flex', justifyContent: 'space-between' } },
-      React.createElement('span', { style: { color: 'black' } }, `${formatSpeed(minSpeed)} ${getUnitLabel()}`),
-      React.createElement('span', { style: { color: 'black' } }, `${formatSpeed(maxSpeed)} ${getUnitLabel()}`),
-    ),
+      }}
+    >
+      <div style={{ display: 'flex', height: '10px', marginBottom: '2px' }}>
+        {legendItems.map(({ color, key }) => (
+          <div
+            key={key}
+            style={{
+              flexGrow: 1,
+              backgroundColor: color,
+            }}
+          />
+        ))}
+      </div>
+      <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+        <span style={{ color: 'black' }}>{`${formatSpeed(minSpeed)} ${getUnitLabel()}`}</span>
+        <span style={{ color: 'black' }}>{`${formatSpeed(maxSpeed)} ${getUnitLabel()}`}</span>
+      </div>
+    </div>
   );
 };
 
