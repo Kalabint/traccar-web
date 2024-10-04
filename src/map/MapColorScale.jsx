@@ -3,65 +3,44 @@ import { useAttributePreference } from '../common/util/preferences';
 import getSpeedColor from '../common/util/colors';
 import { useTranslation } from '../common/components/LocalizationProvider';
 import { speedFromKnots, speedUnitString } from '../common/util/converter';
-import { map } from './core/MapView';
 
 const MapColorScale = ({ minSpeed, maxSpeed }) => {
-  const [width, setWidth] = useState(100);
   const [position, setPosition] = useState({ bottom: 40, left: 10 });
+  const [width, setWidth] = useState(90);
   const scaleRef = useRef(null);
   const speedUnit = useAttributePreference('speedUnit', 'kn');
-  const distanceUnit = useAttributePreference('distanceUnit');
   const t = useTranslation();
 
   useEffect(() => {
-    let resizeObserver;
-    let mapLibreScaleElement;
-
     const updatePosition = () => {
-      if (mapLibreScaleElement && scaleRef.current) {
-        const mapLibreRect = mapLibreScaleElement.getBoundingClientRect();
-        setPosition({
-          bottom: window.innerHeight - mapLibreRect.top + 10,
-          left: mapLibreRect.left,
-        });
-        setWidth(mapLibreRect.width);
+      const navbar = document.querySelector('.makeStyles-menu-2');
+      const navbarHeight = navbar ? navbar.getBoundingClientRect().height : 0;
+
+      setPosition({
+        bottom: 40 + navbarHeight,
+        left: 10,
+      });
+    };
+
+    const updateWidth = () => {
+      if (scaleRef.current) {
+        setWidth(scaleRef.current.offsetWidth);
       }
     };
 
-    const checkForScale = setInterval(() => {
-      mapLibreScaleElement = map.getContainer().querySelector('.maplibregl-ctrl.maplibregl-ctrl-scale');
-      if (mapLibreScaleElement) {
-        clearInterval(checkForScale);
+    updatePosition();
+    updateWidth();
 
-        resizeObserver = new ResizeObserver(updatePosition);
-        resizeObserver.observe(mapLibreScaleElement);
-        resizeObserver.observe(scaleRef.current);
-
-        updatePosition();
-        map.on('move', updatePosition);
-      }
-    }, 100);
+    window.addEventListener('resize', () => {
+      updatePosition();
+      updateWidth();
+    });
 
     return () => {
-      clearInterval(checkForScale);
-      if (resizeObserver) {
-        resizeObserver.disconnect();
-      }
-      map.off('move', updatePosition);
+      window.removeEventListener('resize', updatePosition);
+      window.removeEventListener('resize', updateWidth);
     };
   }, []);
-
-  useEffect(() => {
-    const mapLibreScaleElement = map.getContainer().querySelector('.maplibregl-ctrl.maplibregl-ctrl-scale');
-    if (mapLibreScaleElement) {
-      const mapLibreRect = mapLibreScaleElement.getBoundingClientRect();
-      setPosition({
-        bottom: window.innerHeight - mapLibreRect.top + 10,
-        left: mapLibreRect.left,
-      });
-      setWidth(mapLibreRect.width);
-    }
-  }, [distanceUnit]);
 
   const formatSpeed = (speed) => {
     const convertedSpeed = speedFromKnots(speed, speedUnit);
@@ -70,7 +49,7 @@ const MapColorScale = ({ minSpeed, maxSpeed }) => {
 
   const getUnitLabel = () => speedUnitString(speedUnit, t);
 
-  const steps = Math.max(2, Math.floor(width / 2));
+  const steps = Math.max(2, width - 10);
   const legendItems = Array.from({ length: steps }, (_, i) => {
     const speed = minSpeed + (i / (steps - 1)) * (maxSpeed - minSpeed);
     return { speed, color: getSpeedColor(speed, maxSpeed), key: `legend-${speed}-${i}` };
