@@ -1,6 +1,5 @@
 import React, { useRef, useEffect, useState } from 'react';
 import { useAttributePreference } from '../common/util/preferences';
-console.log(useAttributePreference);
 import getSpeedColor from '../common/util/colors';
 import { useTranslation } from '../common/components/LocalizationProvider';
 import { speedFromKnots, speedUnitString } from '../common/util/converter';
@@ -12,17 +11,22 @@ const MapColorScale = ({ minSpeed, maxSpeed }) => {
   const t = useTranslation();
 
   useEffect(() => {
+    let resizeObserver;
+
     if (scaleRef.current) {
-      const resizeObserver = new ResizeObserver((entries) => {
+      resizeObserver = new ResizeObserver((entries) => {
         entries.forEach((entry) => {
           setWidth(entry.contentRect.width);
         });
       });
       resizeObserver.observe(scaleRef.current);
-      return () => {
-        resizeObserver.disconnect();
-      };
     }
+
+    return () => {
+      if (resizeObserver) {
+        resizeObserver.disconnect();
+      }
+    };
   }, []);
 
   const formatSpeed = (speed) => {
@@ -30,9 +34,7 @@ const MapColorScale = ({ minSpeed, maxSpeed }) => {
     return Math.round(convertedSpeed);
   };
 
-  const getUnitLabel = () => {
-    return speedUnitString(speedUnit, t);
-  };
+  const getUnitLabel = () => speedUnitString(speedUnit, t);
 
   const steps = Math.max(2, Math.floor(width / 2));
   const legendItems = Array.from({ length: steps }, (_, i) => {
