@@ -3,42 +3,39 @@ import { useAttributePreference } from '../common/util/preferences';
 import getSpeedColor from '../common/util/colors';
 import { useTranslation } from '../common/components/LocalizationProvider';
 import { speedFromKnots, speedUnitString } from '../common/util/converter';
+import { map } from './core/MapView';
 
 const MapColorScale = ({ minSpeed, maxSpeed }) => {
+  const [width, setWidth] = useState(100);
   const [position, setPosition] = useState({ bottom: 40, left: 10 });
-  const [width, setWidth] = useState(90);
   const scaleRef = useRef(null);
   const speedUnit = useAttributePreference('speedUnit', 'kn');
+  const distanceUnit = useAttributePreference('distanceUnit');
   const t = useTranslation();
 
   useEffect(() => {
+    let resizeObserver;
+
     const updatePosition = () => {
-      const navbar = document.querySelector('.makeStyles-menu-2');
-      const navbarHeight = navbar ? navbar.getBoundingClientRect().height : 0;
-
-      setPosition({
-        bottom: 40 + navbarHeight,
-        left: 10,
-      });
-    };
-
-    const updateWidth = () => {
       if (scaleRef.current) {
-        setWidth(scaleRef.current.offsetWidth);
+        setPosition({
+          bottom: 40,
+          left: 10,
+        });
+        setWidth(100);
       }
     };
 
+    resizeObserver = new ResizeObserver(updatePosition);
+    resizeObserver.observe(scaleRef.current);
     updatePosition();
-    updateWidth();
-
-    window.addEventListener('resize', () => {
-      updatePosition();
-      updateWidth();
-    });
+    map.on('move', updatePosition);
 
     return () => {
-      window.removeEventListener('resize', updatePosition);
-      window.removeEventListener('resize', updateWidth);
+      if (resizeObserver) {
+        resizeObserver.disconnect();
+      }
+      map.off('move', updatePosition);
     };
   }, []);
 
@@ -49,7 +46,7 @@ const MapColorScale = ({ minSpeed, maxSpeed }) => {
 
   const getUnitLabel = () => speedUnitString(speedUnit, t);
 
-  const steps = Math.max(2, width - 10);
+  const steps = Math.max(2, Math.floor(width / 2));
   const legendItems = Array.from({ length: steps }, (_, i) => {
     const speed = minSpeed + (i / (steps - 1)) * (maxSpeed - minSpeed);
     return { speed, color: getSpeedColor(speed, maxSpeed), key: `legend-${speed}-${i}` };
@@ -62,7 +59,7 @@ const MapColorScale = ({ minSpeed, maxSpeed }) => {
         position: 'absolute',
         bottom: `${position.bottom}px`,
         left: `${position.left}px`,
-        backgroundColor: 'rgba(255, 255, 255, 0.9)',
+        backgroundColor: 'rgba(255, 255, 255, 0.5)',
         padding: '4px',
         borderRadius: '0px',
         fontSize: '10px',
