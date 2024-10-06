@@ -37,6 +37,7 @@ const MapColorScale = ({ minSpeed, maxSpeed }) => {
         }
       };
     }
+    return undefined;
   }, []);
 
   const formatSpeed = (speed) => {
