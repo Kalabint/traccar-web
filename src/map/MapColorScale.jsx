@@ -7,36 +7,36 @@ import { map } from './core/MapView';
 
 const MapColorScale = ({ minSpeed, maxSpeed }) => {
   const [width, setWidth] = useState(100);
-  const [position, setPosition] = useState({ bottom: 40, left: 10 });
+  const [visible, setVisible] = useState(true);
   const scaleRef = useRef(null);
   const speedUnit = useAttributePreference('speedUnit', 'kn');
-  const distanceUnit = useAttributePreference('distanceUnit');
   const t = useTranslation();
 
   useEffect(() => {
-    let resizeObserver;
+    if (map && scaleRef.current) {
+      const container = scaleRef.current;
+      const controlContainer = map.getContainer().querySelector('.maplibregl-ctrl-bottom-left');
 
-    const updatePosition = () => {
-      if (scaleRef.current) {
-        setPosition({
-          bottom: 40,
-          left: 10,
-        });
-        setWidth(100);
+      if (controlContainer) {
+        controlContainer.appendChild(container);
+        setWidth(container.offsetWidth);
       }
-    };
 
-    resizeObserver = new ResizeObserver(updatePosition);
-    resizeObserver.observe(scaleRef.current);
-    updatePosition();
-    map.on('move', updatePosition);
+      const handleMapClick = (event) => {
+        if (scaleRef.current && !scaleRef.current.contains(event.target)) {
+          setVisible(false);
+        }
+      };
 
-    return () => {
-      if (resizeObserver) {
-        resizeObserver.disconnect();
-      }
-      map.off('move', updatePosition);
-    };
+      map.on('click', handleMapClick);
+
+      return () => {
+        map.off('click', handleMapClick);
+        if (controlContainer && container && container.parentNode === controlContainer) {
+          controlContainer.removeChild(container);
+        }
+      };
+    }
   }, []);
 
   const formatSpeed = (speed) => {
@@ -52,13 +52,17 @@ const MapColorScale = ({ minSpeed, maxSpeed }) => {
     return { speed, color: getSpeedColor(speed, maxSpeed), key: `legend-${speed}-${i}` };
   });
 
+  if (!visible) {
+    return null;
+  }
+
   return (
     <div
       ref={scaleRef}
       style={{
         position: 'absolute',
-        bottom: `${position.bottom}px`,
-        left: `${position.left}px`,
+        bottom: '40px',
+        left: '10px',
         backgroundColor: 'rgba(255, 255, 255, 0.5)',
         padding: '4px',
         borderRadius: '0px',
@@ -66,10 +70,11 @@ const MapColorScale = ({ minSpeed, maxSpeed }) => {
         lineHeight: '1',
         whiteSpace: 'nowrap',
         width: '90px',
-        zIndex: 1,
+        zIndex: 2,
         borderLeft: '2px solid black',
         borderBottom: '2px solid black',
         borderRight: '2px solid black',
+        pointerEvents: 'auto',
       }}
     >
       <div style={{ display: 'flex', height: '10px', marginBottom: '2px' }}>
@@ -84,8 +89,16 @@ const MapColorScale = ({ minSpeed, maxSpeed }) => {
         ))}
       </div>
       <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-        <span style={{ color: 'black' }}>{`${formatSpeed(minSpeed)} ${getUnitLabel()}`}</span>
-        <span style={{ color: 'black' }}>{`${formatSpeed(maxSpeed)} ${getUnitLabel()}`}</span>
+        <span
+          style={{ color: 'black', cursor: 'default' }}
+        >
+          {`${formatSpeed(minSpeed)} ${getUnitLabel()}`}
+        </span>
+        <span
+          style={{ color: 'black', cursor: 'default' }}
+        >
+          {`${formatSpeed(maxSpeed)} ${getUnitLabel()}`}
+        </span>
       </div>
     </div>
   );
