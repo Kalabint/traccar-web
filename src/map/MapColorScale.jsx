@@ -21,7 +21,7 @@ class ColorScaleControl {
     const unitLabel = this.getUnitLabel();
     const legendItems = Array.from({ length: steps }, (_, i) => {
       const speed = this.minSpeed + (i / (steps - 1)) * (this.maxSpeed - this.minSpeed);
-      return { speed, color: this.getSpeedColor(speed, this.maxSpeed) };
+      return { speed, color: this.getSpeedColor(speed, this.minSpeed, this.maxSpeed) };
     });
 
     this.container.innerHTML = '';
