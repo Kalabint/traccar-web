@@ -1,6 +1,4 @@
-import React, {
-  useId, useCallback, useEffect, useState,
-} from 'react';
+import { useId, useCallback, useEffect, useState } from 'react';
 import { map } from './core/MapView';
 import getSpeedColor from '../common/util/colors';
 import MapColorScale from './MapColorScale';
@@ -15,11 +13,11 @@ const MapRoutePoints = ({ positions, onClick }) => {
 
   const onMarkerClick = useCallback(
     (event) => {
-      event.preventDefault();
-      const feature = event.features[0];
-      if (onClick) {
-        onClick(feature.properties.id, feature.properties.index);
-      }
+    event.preventDefault();
+    const feature = event.features[0];
+    if (onClick) {
+      onClick(feature.properties.id, feature.properties.index);
+    }
     },
     [onClick],
   );
@@ -65,31 +63,30 @@ const MapRoutePoints = ({ positions, onClick }) => {
   }, [onMarkerClick]);
 
   useEffect(() => {
-    if (positions.length > 0) {
-      const speeds = positions.map((p) => p.speed);
-      const maxSpeedValue = Math.max(...speeds);
-      const minSpeedValue = Math.min(...speeds);
+    if (positions.length === 0) return;
 
-      setMaxSpeed(maxSpeedValue);
-      setMinSpeed(minSpeedValue);
+    const maxSpeedValue = positions.map((p) => p.speed).reduce((a, b) => Math.max(a, b), -Infinity);
+    const minSpeedValue = positions.map((p) => p.speed).reduce((a, b) => Math.min(a, b), Infinity);
 
-      map.getSource(id)?.setData({
-        type: 'FeatureCollection',
-        features: positions.map((position, index) => ({
-          type: 'Feature',
-          geometry: {
-            type: 'Point',
-            coordinates: [position.longitude, position.latitude],
-          },
-          properties: {
-            index,
-            id: position.id,
-            rotation: position.course,
-            color: getSpeedColor(position.speed, maxSpeedValue),
-          },
-        })),
-      });
-    }
+    setMaxSpeed(maxSpeedValue);
+    setMinSpeed(minSpeedValue);
+
+    map.getSource(id)?.setData({
+      type: 'FeatureCollection',
+      features: positions.map((position, index) => ({
+        type: 'Feature',
+        geometry: {
+          type: 'Point',
+          coordinates: [position.longitude, position.latitude],
+        },
+        properties: {
+          index,
+          id: position.id,
+          rotation: position.course,
+          color: getSpeedColor(position.speed, minSpeedValue, maxSpeedValue),
+        },
+      })),
+    });
   }, [onMarkerClick, positions]);
 
   if (positions.length > 0 && minSpeed !== null && maxSpeed !== null) {
