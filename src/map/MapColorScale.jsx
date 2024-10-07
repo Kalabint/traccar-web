@@ -6,10 +6,9 @@ import { speedFromKnots, speedUnitString } from '../common/util/converter';
 import { map } from './core/MapView';
 
 class ColorScaleControl {
-  constructor(minSpeed, maxSpeed, speedUnit, getSpeedColor, formatSpeed, getUnitLabel) {
+  constructor(minSpeed, maxSpeed, getSpeedColor, formatSpeed, getUnitLabel) {
     this.minSpeed = minSpeed;
     this.maxSpeed = maxSpeed;
-    this.speedUnit = speedUnit;
     this.getSpeedColor = getSpeedColor;
     this.formatSpeed = formatSpeed;
     this.getUnitLabel = getUnitLabel;
@@ -19,22 +18,65 @@ class ColorScaleControl {
 
   renderColorScale() {
     const steps = 100;
+    const unitLabel = this.getUnitLabel();
     const legendItems = Array.from({ length: steps }, (_, i) => {
-      const speed = this.minSpeed + (i / (steps - 1)) * (this.maxSpeed - this.minSpeed);
+      const speed =
+        this.minSpeed + (i / (steps - 1)) * (this.maxSpeed - this.minSpeed);
       return { speed, color: this.getSpeedColor(speed, this.maxSpeed) };
     });
 
-    this.container.innerHTML = `
-    <div style="position: absolute; bottom: 40px; left: 10px; background-color: rgba(255, 255, 255, 0.75); padding: 4px; border-radius: 0px; font-size: 10px; line-height: 1; white-space: nowrap; width: 90px; z-index: 2; border-left: 2px solid black; border-bottom: 2px solid black; border-right: 2px solid black;">
-      <div style="display: flex; height: 10px; margin-bottom: 2px;">
-        ${legendItems.map(({ color }) => `<div style="flex-grow: 1; background-color: ${color};"></div>`).join('')}
-      </div>
-      <div style="display: flex; justify-content: space-between;">
-        <span style="color: black; cursor: text;">${this.formatSpeed(this.minSpeed)} ${this.getUnitLabel()}</span>
-        <span style="color: black; cursor: text;">${this.formatSpeed(this.maxSpeed)} ${this.getUnitLabel()}</span>
-      </div>
-    </div>
-  `;
+    this.container.innerHTML = '';
+
+    const legendContainer = document.createElement('div');
+    legendContainer.className = 'legend-container';
+    Object.assign(legendContainer.style, {
+      position: 'absolute',
+      bottom: '40px',
+      left: '10px',
+      backgroundColor: 'rgba(255, 255, 255, 0.75)',
+      padding: '4px',
+      fontSize: '10px',
+      lineHeight: '1',
+      whiteSpace: 'nowrap',
+      width: '90px',
+      zIndex: '2',
+      borderLeft: '2px solid black',
+      borderBottom: '2px solid black',
+      borderRight: '2px solid black',
+    });
+
+    const colorBar = document.createElement('div');
+    Object.assign(colorBar.style, {
+      display: 'flex',
+      height: '10px',
+      marginBottom: '2px',
+    });
+    legendItems.forEach(({ color }) => {
+      const colorStep = document.createElement('div');
+      Object.assign(colorStep.style, {
+        flexGrow: '1',
+        backgroundColor: color,
+      });
+      colorBar.appendChild(colorStep);
+    });
+    legendContainer.appendChild(colorBar);
+
+    const labelsContainer = document.createElement('div');
+    Object.assign(labelsContainer.style, {
+      display: 'flex',
+      justifyContent: 'space-between',
+    });
+    const minLabel = document.createElement('span');
+    minLabel.textContent = `${this.formatSpeed(this.minSpeed)} ${unitLabel}`;
+    minLabel.style.color = 'black';
+    const maxLabel = document.createElement('span');
+    maxLabel.textContent = `${this.formatSpeed(this.maxSpeed)} ${unitLabel}`;
+    maxLabel.style.color = 'black';
+    labelsContainer.appendChild(minLabel);
+    labelsContainer.appendChild(maxLabel);
+
+    legendContainer.appendChild(labelsContainer);
+    this.container.appendChild(legendContainer);
   }
 
   onAdd() {
@@ -43,7 +85,9 @@ class ColorScaleControl {
   }
 
   onRemove() {
-    this.container.parentNode.removeChild(this.container);
+    if (this.container && this.container.parentNode) {
+      this.container.parentNode.removeChild(this.container);
+    }
   }
 }
 
@@ -59,21 +103,20 @@ const MapColorScale = ({ minSpeed, maxSpeed }) => {
   const getUnitLabel = () => speedUnitString(speedUnit, t);
 
   useEffect(() => {
-    const colorScaleControl = new ColorScaleControl(
-      minSpeed,
-      maxSpeed,
-      speedUnit,
-      getSpeedColor,
-      formatSpeed,
-      getUnitLabel,
-    );
-
+    let colorScaleControl;
     if (map) {
+      colorScaleControl = new ColorScaleControl(
+        minSpeed,
+        maxSpeed,
+        getSpeedColor,
+        formatSpeed,
+        getUnitLabel
+      );
       map.addControl(colorScaleControl, 'bottom-left');
     }
 
     return () => {
-      if (map) {
+      if (map && colorScaleControl) {
         map.removeControl(colorScaleControl);
       }
     };
