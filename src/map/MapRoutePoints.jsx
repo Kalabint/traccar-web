@@ -1,4 +1,7 @@
-import { useId, useCallback, useEffect, useState } from 'react';
+import {
+  React,
+  useId, useCallback, useEffect, useState,
+} from 'react';
 import { map } from './core/MapView';
 import getSpeedColor from '../common/util/colors';
 import MapColorScale from './MapColorScale';
@@ -13,11 +16,11 @@ const MapRoutePoints = ({ positions, onClick }) => {
 
   const onMarkerClick = useCallback(
     (event) => {
-    event.preventDefault();
-    const feature = event.features[0];
-    if (onClick) {
-      onClick(feature.properties.id, feature.properties.index);
-    }
+      event.preventDefault();
+      const feature = event.features[0];
+      if (onClick) {
+        onClick(feature.properties.id, feature.properties.index);
+      }
     },
     [onClick],
   );
