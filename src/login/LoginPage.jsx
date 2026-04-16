@@ -119,6 +119,16 @@ const LoginPage = () => {
         const user = await response.json();
         generateLoginToken();
         dispatch(sessionActions.updateUser(user));
+        // Check for a pending OIDC authorization that was stored server-side
+        // before the user was authenticated (replaces the index.html polling hack).
+        const resumeResponse = await fetch('/api/oidc/authorize/resume');
+        if (resumeResponse.ok && resumeResponse.status !== 204) {
+          const data = await resumeResponse.json();
+          if (data && data.location) {
+            window.location.href = data.location;
+            return;
+          }
+        }
         const target = window.sessionStorage.getItem('postLogin') || '/';
         window.sessionStorage.removeItem('postLogin');
         navigate(target, { replace: true });
